@@ -35,13 +35,33 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
       return response.json();
     },
     onSuccess: (data) => {
-      // Start download or open in new tab
+      // Create download link and trigger download
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, '_blank');
-        toast({
-          title: "Download started",
-          description: "Your download should begin shortly",
-        });
+        // Create temporary link element for download
+        const link = document.createElement('a');
+        link.href = data.downloadUrl;
+        link.download = videoInfo.title || 'video';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Try to trigger download directly
+        try {
+          link.click();
+          toast({
+            title: "Download started",
+            description: "Your download should begin shortly",
+          });
+        } catch (error) {
+          // Fallback: open in new tab if direct download fails
+          window.open(data.downloadUrl, '_blank');
+          toast({
+            title: "Download link opened",
+            description: "If download doesn't start automatically, right-click and save the file",
+          });
+        }
+        
+        // Clean up
+        document.body.removeChild(link);
       }
     },
     onError: (error: any) => {

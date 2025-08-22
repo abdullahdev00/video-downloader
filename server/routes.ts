@@ -9,13 +9,15 @@ import rateLimit from "express-rate-limit";
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // Limit each IP to 50 requests per windowMs
-  message: { error: "Too many requests, please try again later." }
+  message: { error: "Too many requests, please try again later." },
+  skip: () => process.env.NODE_ENV === 'development' // Skip rate limiting in development
 });
 
 const downloadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // Limit downloads to 10 per minute
-  message: { error: "Download rate limit exceeded, please wait before trying again." }
+  message: { error: "Download rate limit exceeded, please wait before trying again." },
+  skip: () => process.env.NODE_ENV === 'development' // Skip rate limiting in development
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {

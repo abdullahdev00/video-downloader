@@ -36,9 +36,9 @@ const platforms: Platform[] = [
   },
   {
     name: "Twitter/X",
-    icon: "fab fa-x-twitter",
+    icon: "fab fa-twitter",
     color: "text-white",
-    bgColor: "bg-black"
+    bgColor: "bg-slate-800"
   },
   {
     name: "Vimeo",
@@ -57,6 +57,18 @@ const platforms: Platform[] = [
     icon: "fab fa-linkedin-in",
     color: "text-white",
     bgColor: "bg-blue-700"
+  },
+  {
+    name: "Pinterest",
+    icon: "fab fa-pinterest",
+    color: "text-white",
+    bgColor: "bg-red-600"
+  },
+  {
+    name: "Dailymotion",
+    icon: "fab fa-dailymotion",
+    color: "text-white",
+    bgColor: "bg-blue-600"
   }
 ];
 
