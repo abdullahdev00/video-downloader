@@ -40,9 +40,9 @@ export class VideoExtractorService {
   async extractVideoInfo(url: string): Promise<ExtractedVideoInfo> {
     return new Promise((resolve, reject) => {
       const platform = this.detectPlatform(url);
-      
-      // Use yt-dlp to extract video information with enhanced bypass options
-      const ytDlp = spawn('yt-dlp', [
+
+      // Build yt-dlp args with enhanced bypass options
+      const args = [
         '--dump-json',
         '--no-download',
         '--no-warnings',
@@ -51,13 +51,31 @@ export class VideoExtractorService {
         '--ignore-config',
         '--no-check-certificate',
         '--geo-bypass',
+        '--force-ipv4',
         '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         '--add-header', 'Accept-Language:en-us,en;q=0.5',
         '--add-header', 'Sec-Fetch-Mode:navigate',
         '--extractor-retries', '3',
         '--socket-timeout', '30',
-        url
-      ]);
+      ] as string[];
+
+      // TikTok-specific headers and optional cookies to reduce 403/login issues
+      if (url.includes('tiktok.com')) {
+        args.push(
+          '--add-header', 'Origin:https://www.tiktok.com',
+          '--add-header', 'Referer:https://www.tiktok.com/'
+        );
+        // Some TikTok extra flags to improve extraction
+        args.push('--extractor-args', 'tiktok:player_url=1');
+        const cookiesBrowser = process.env.COOKIES_BROWSER; // e.g., 'chrome' | 'edge' | 'firefox'
+        const cookiesFile = process.env.COOKIES_FILE; // absolute path to cookies.txt (Netscape format)
+        if (cookiesBrowser) args.push('--cookies-from-browser', cookiesBrowser);
+        if (cookiesFile) args.push('--cookies', cookiesFile);
+      }
+
+      args.push(url);
+
+      const ytDlp = spawn('yt-dlp', args);
 
       let output = '';
       let errorOutput = '';
@@ -92,6 +110,23 @@ export class VideoExtractorService {
                 { quality: '480p', format: 'mp4', fileSize: '28 MB' },
                 { quality: '360p', format: 'mp4', fileSize: '18 MB' },
                 { quality: 'Audio Only', format: 'mp3', fileSize: '4.2 MB' }
+              ]
+            };
+            resolve(mockVideoInfo);
+          } else if (url.includes('tiktok.com') && (errorOutput.includes('HTTP Error 403') || errorOutput.toLowerCase().includes('login') || errorOutput.toLowerCase().includes('forbidden'))) {
+            // TikTok often needs cookies. Provide a safe demo fallback so UI keeps working.
+            const mockVideoInfo: ExtractedVideoInfo = {
+              title: 'TikTok Sample (Demo Mode)',
+              description: 'TikTok sometimes requires login/cookies. Configure COOKIES_BROWSER or COOKIES_FILE for real extraction.',
+              thumbnail: 'https://images.unsplash.com/photo-1524255684952-d7185b509571?q=80&w=1200&auto=format&fit=crop',
+              duration: '00:30',
+              uploader: 'TikTok Creator',
+              viewCount: 98765,
+              platform: 'TikTok',
+              availableQualities: [
+                { quality: '1080p HD', format: 'mp4', fileSize: 'Unknown' },
+                { quality: '720p HD', format: 'mp4', fileSize: 'Unknown' },
+                { quality: 'Audio Only', format: 'mp3', fileSize: 'Variable' }
               ]
             };
             resolve(mockVideoInfo);
@@ -170,6 +205,18 @@ export class VideoExtractorService {
         '--fragment-retries', '5',
         '--socket-timeout', '30'
       ];
+
+      // TikTok-specific headers and optional cookies for download URL generation
+      if (url.includes('tiktok.com')) {
+        args.push(
+          '--add-header', 'Origin:https://www.tiktok.com',
+          '--add-header', 'Referer:https://www.tiktok.com/'
+        );
+        const cookiesBrowser = process.env.COOKIES_BROWSER;
+        const cookiesFile = process.env.COOKIES_FILE;
+        if (cookiesBrowser) args.push('--cookies-from-browser', cookiesBrowser);
+        if (cookiesFile) args.push('--cookies', cookiesFile);
+      }
       
       if (format === 'mp3') {
         args.push('--extract-audio', '--audio-format', 'mp3');

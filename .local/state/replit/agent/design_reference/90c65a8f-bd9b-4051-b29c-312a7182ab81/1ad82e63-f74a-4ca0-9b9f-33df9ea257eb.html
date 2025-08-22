@@ -1,0 +1,863 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-in-One Video Downloader - Download Videos from YouTube, TikTok & More</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': {
+                            500: '#8B5CF6',
+                            600: '#7C3AED',
+                        },
+                        'secondary': {
+                            500: '#3B82F6',
+                            600: '#2563EB',
+                        }
+                    },
+                    backdropBlur: {
+                        'glass': '16px',
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-card-dark {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+        }
+        
+        .gradient-bg-dark {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        }
+        
+        .loading-spinner {
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .platform-icon {
+            transition: all 0.3s ease;
+        }
+        
+        .platform-icon:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .drag-over {
+            border-color: #8B5CF6 !important;
+            background-color: rgba(139, 92, 246, 0.05) !important;
+        }
+    </style>
+</head>
+<body class="font-inter min-h-screen gradient-bg transition-all duration-300" id="app">
+    
+    <!-- Header -->
+    <header class="container mx-auto px-4 py-6">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center glass-card">
+                    <i class="fas fa-download text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">VideoDownloader Pro</h1>
+                    <p class="text-white/70 text-sm">Download videos from any platform</p>
+                </div>
+            </div>
+            
+            <!-- Theme Toggle -->
+            <button id="themeToggle" class="p-3 rounded-xl glass-card hover:bg-white/20 transition-all duration-300 text-white">
+                <i class="fas fa-moon text-lg" id="themeIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 pb-12">
+        
+        <!-- Supported Platforms -->
+        <section class="mb-12">
+            <h2 class="text-center text-white text-xl font-semibold mb-8">Supported Platforms</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4 max-w-5xl mx-auto">
+                <!-- YouTube -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <!-- Red YouTube logo background -->
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-red-600 flex items-center justify-center">
+                        <i class="fab fa-youtube text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">YouTube</span>
+                </div>
+                
+                <!-- TikTok -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-black flex items-center justify-center">
+                        <i class="fab fa-tiktok text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">TikTok</span>
+                </div>
+                
+                <!-- Instagram -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                        <i class="fab fa-instagram text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">Instagram</span>
+                </div>
+                
+                <!-- Facebook -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-600 flex items-center justify-center">
+                        <i class="fab fa-facebook-f text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">Facebook</span>
+                </div>
+                
+                <!-- Twitter/X -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-black flex items-center justify-center">
+                        <i class="fab fa-x-twitter text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">Twitter/X</span>
+                </div>
+                
+                <!-- Vimeo -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-500 flex items-center justify-center">
+                        <i class="fab fa-vimeo-v text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">Vimeo</span>
+                </div>
+                
+                <!-- Reddit -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-orange-600 flex items-center justify-center">
+                        <i class="fab fa-reddit-alien text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">Reddit</span>
+                </div>
+                
+                <!-- LinkedIn -->
+                <div class="platform-icon glass-card rounded-2xl p-4 text-center cursor-pointer group">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-700 flex items-center justify-center">
+                        <i class="fab fa-linkedin-in text-white text-xl"></i>
+                    </div>
+                    <span class="text-white text-sm font-medium">LinkedIn</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- URL Input Section -->
+        <section class="max-w-4xl mx-auto mb-12">
+            <div class="glass-card rounded-3xl p-8">
+                <h3 class="text-center text-white text-2xl font-semibold mb-6">
+                    Paste Video URL Below
+                </h3>
+                
+                <div class="space-y-4">
+                    <!-- URL Input with drag and drop -->
+                    <div class="relative">
+                        <div id="urlDropZone" class="relative">
+                            <input 
+                                type="url" 
+                                id="videoUrl" 
+                                placeholder="https://youtube.com/watch?v=... or any supported platform URL"
+                                class="w-full p-6 text-lg bg-white/10 border-2 border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-primary-500 transition-all duration-300"
+                                data-mock="true"
+                            >
+                            <div class="absolute right-4 top-1/2 transform -translate-y-1/2 flex space-x-2">
+                                <button id="pasteBtn" class="p-2 text-white/70 hover:text-white transition-colors" title="Paste from clipboard">
+                                    <i class="fas fa-clipboard text-lg"></i>
+                                </button>
+                                <button id="clearBtn" class="p-2 text-white/70 hover:text-white transition-colors" title="Clear input">
+                                    <i class="fas fa-times text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- URL validation message -->
+                        <div id="urlValidation" class="mt-2 text-sm hidden">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-exclamation-triangle text-amber-400"></i>
+                                <span class="text-white/80">Please enter a valid video URL</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Download Button -->
+                    <div class="text-center">
+                        <button 
+                            id="downloadBtn" 
+                            class="bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-semibold py-4 px-12 rounded-2xl text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed min-h-[56px] min-w-[200px]"
+                            data-event="click:handleDownload"
+                        >
+                            <span id="downloadBtnText">
+                                <i class="fas fa-download mr-2"></i>
+                                Get Video Info
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Video Preview Section (Hidden initially) -->
+        <section id="videoPreview" class="max-w-4xl mx-auto mb-12 hidden fade-in">
+            <div class="glass-card rounded-3xl p-8">
+                <h3 class="text-white text-xl font-semibold mb-6">Video Information</h3>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Video Thumbnail -->
+                    <div class="space-y-4">
+                        <!-- Sample video thumbnail from popular YouTube video -->
+                        <img 
+                            id="videoThumbnail" 
+                            src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=450" 
+                            alt="Video thumbnail preview"
+                            class="w-full h-48 object-cover rounded-2xl shadow-lg"
+                            data-mock-image="true"
+                            data-implementation="Display actual video thumbnail from extracted metadata"
+                        >
+                        
+                        <!-- Video Details -->
+                        <div class="space-y-2">
+                            <h4 id="videoTitle" class="text-white font-semibold text-lg leading-tight" data-bind="video.title">
+                                Sample Video Title - Amazing Content You'll Love
+                            </h4>
+                            <div class="flex items-center space-x-4 text-white/70 text-sm">
+                                <span id="videoDuration" data-bind="video.duration">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    05:42
+                                </span>
+                                <span id="videoViews" data-bind="video.views">
+                                    <i class="fas fa-eye mr-1"></i>
+                                    1.2M views
+                                </span>
+                                <span id="videoUploader" data-bind="video.uploader">
+                                    <i class="fas fa-user mr-1"></i>
+                                    Sample Creator
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quality Options -->
+                    <div class="space-y-4">
+                        <h5 class="text-white font-medium">Select Quality & Format</h5>
+                        
+                        <!-- Quality Selection -->
+                        <div class="space-y-3">
+                            <!-- @MAP: qualityOptions.map(option => ( -->
+                            <label class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
+                                <input type="radio" name="quality" value="1080p" class="text-primary-500 focus:ring-primary-500" checked>
+                                <div class="flex-1 flex justify-between items-center">
+                                    <span class="text-white font-medium">1080p HD</span>
+                                    <span class="text-white/70 text-sm">MP4 • 45.2 MB</span>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
+                                <input type="radio" name="quality" value="720p" class="text-primary-500 focus:ring-primary-500">
+                                <div class="flex-1 flex justify-between items-center">
+                                    <span class="text-white font-medium">720p HD</span>
+                                    <span class="text-white/70 text-sm">MP4 • 28.1 MB</span>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
+                                <input type="radio" name="quality" value="480p" class="text-primary-500 focus:ring-primary-500">
+                                <div class="flex-1 flex justify-between items-center">
+                                    <span class="text-white font-medium">480p SD</span>
+                                    <span class="text-white/70 text-sm">MP4 • 18.7 MB</span>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center space-x-3 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
+                                <input type="radio" name="quality" value="audio" class="text-primary-500 focus:ring-primary-500">
+                                <div class="flex-1 flex justify-between items-center">
+                                    <span class="text-white font-medium">Audio Only</span>
+                                    <span class="text-white/70 text-sm">MP3 • 5.4 MB</span>
+                                </div>
+                            </label>
+                            <!-- @END_MAP )) -->
+                        </div>
+                        
+                        <!-- Download Action Buttons -->
+                        <div class="flex space-x-3 pt-4">
+                            <button 
+                                id="startDownloadBtn" 
+                                class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
+                                data-event="click:startDownload"
+                            >
+                                <i class="fas fa-download mr-2"></i>
+                                Download
+                            </button>
+                            <button 
+                                id="copyLinkBtn" 
+                                class="bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
+                                data-event="click:copyDownloadLink"
+                            >
+                                <i class="fas fa-link mr-2"></i>
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Section (Hidden initially) -->
+        <section id="downloadProgress" class="max-w-2xl mx-auto mb-12 hidden fade-in">
+            <div class="glass-card rounded-3xl p-8">
+                <div class="text-center space-y-6">
+                    <div class="w-16 h-16 mx-auto">
+                        <div class="loading-spinner border-4 border-white/20 border-t-primary-500 rounded-full w-16 h-16"></div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-white text-xl font-semibold mb-2">Processing Video...</h3>
+                        <p class="text-white/70">Please wait while we prepare your download</p>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-white/10 rounded-full h-3">
+                        <div id="progressBar" class="bg-gradient-to-r from-primary-500 to-secondary-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    
+                    <div id="progressText" class="text-white/80 text-sm">
+                        Initializing download...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Success/Error Notifications -->
+        <div id="notifications" class="fixed top-4 right-4 space-y-2 z-50">
+            <!-- Success notification template (hidden by default) -->
+            <div class="notification hidden bg-emerald-600 text-white p-4 rounded-xl shadow-lg fade-in">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-check-circle text-xl"></i>
+                    <div>
+                        <div class="font-semibold">Download Ready!</div>
+                        <div class="text-sm opacity-90">Your video is ready for download</div>
+                    </div>
+                    <button class="text-white/70 hover:text-white ml-4">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download History Section -->
+        <section class="max-w-4xl mx-auto mb-12">
+            <div class="glass-card rounded-3xl p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-white text-xl font-semibold">Recent Downloads</h3>
+                    <button id="clearHistoryBtn" class="text-white/70 hover:text-white text-sm">
+                        <i class="fas fa-trash mr-1"></i>
+                        Clear History
+                    </button>
+                </div>
+                
+                <!-- History Items -->
+                <div id="historyList" class="space-y-3">
+                    <!-- @STATE: downloadHistory:array = [] -->
+                    <!-- Sample history items -->
+                    <!-- @MAP: downloadHistory.map(item => ( -->
+                    <div class="flex items-center space-x-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors" data-mock="true">
+                        <!-- Sample thumbnail for history item -->
+                        <img 
+                            src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=60" 
+                            alt="Video thumbnail"
+                            class="w-16 h-12 object-cover rounded-lg"
+                        >
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium truncate">Sample Video Title from YouTube</h4>
+                            <p class="text-white/70 text-sm">Downloaded 2 hours ago • 1080p • 45.2 MB</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="p-2 text-white/70 hover:text-white transition-colors" title="Download again">
+                                <i class="fas fa-redo text-sm"></i>
+                            </button>
+                            <button class="p-2 text-white/70 hover:text-white transition-colors" title="Copy link">
+                                <i class="fas fa-link text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors" data-mock="true">
+                        <img 
+                            src="https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=60" 
+                            alt="Video thumbnail"
+                            class="w-16 h-12 object-cover rounded-lg"
+                        >
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium truncate">TikTok Video - Funny Compilation</h4>
+                            <p class="text-white/70 text-sm">Downloaded yesterday • 720p • 12.8 MB</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="p-2 text-white/70 hover:text-white transition-colors">
+                                <i class="fas fa-redo text-sm"></i>
+                            </button>
+                            <button class="p-2 text-white/70 hover:text-white transition-colors">
+                                <i class="fas fa-link text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                    
+                    <!-- Empty state when no history -->
+                    <div id="emptyHistory" class="text-center py-8 text-white/50 hidden">
+                        <i class="fas fa-history text-3xl mb-4"></i>
+                        <p>No download history yet</p>
+                        <p class="text-sm">Your recent downloads will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="max-w-4xl mx-auto mb-12">
+            <div class="glass-card rounded-3xl p-8">
+                <h3 class="text-white text-2xl font-semibold mb-8 text-center">Frequently Asked Questions</h3>
+                
+                <div class="space-y-4">
+                    <div class="border-b border-white/10 pb-4">
+                        <button class="w-full text-left flex justify-between items-center text-white font-medium py-3 hover:text-primary-300 transition-colors">
+                            <span>Which platforms are supported?</span>
+                            <i class="fas fa-chevron-down transform transition-transform"></i>
+                        </button>
+                        <div class="text-white/70 text-sm mt-2">
+                            We support YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo, Dailymotion, Reddit, Pinterest, and LinkedIn videos.
+                        </div>
+                    </div>
+                    
+                    <div class="border-b border-white/10 pb-4">
+                        <button class="w-full text-left flex justify-between items-center text-white font-medium py-3 hover:text-primary-300 transition-colors">
+                            <span>Is it free to use?</span>
+                            <i class="fas fa-chevron-down transform transition-transform"></i>
+                        </button>
+                        <div class="text-white/70 text-sm mt-2">
+                            Yes, our video downloader is completely free to use with no hidden charges or subscriptions required.
+                        </div>
+                    </div>
+                    
+                    <div class="border-b border-white/10 pb-4">
+                        <button class="w-full text-left flex justify-between items-center text-white font-medium py-3 hover:text-primary-300 transition-colors">
+                            <span>What video qualities are available?</span>
+                            <i class="fas fa-chevron-down transform transition-transform"></i>
+                        </button>
+                        <div class="text-white/70 text-sm mt-2">
+                            We offer multiple quality options from 240p to 4K (when available), plus audio-only downloads in MP3 format.
+                        </div>
+                    </div>
+                    
+                    <div class="border-b border-white/10 pb-4">
+                        <button class="w-full text-left flex justify-between items-center text-white font-medium py-3 hover:text-primary-300 transition-colors">
+                            <span>Do you store downloaded videos?</span>
+                            <i class="fas fa-chevron-down transform transition-transform"></i>
+                        </button>
+                        <div class="text-white/70 text-sm mt-2">
+                            No, we do not store any downloaded content on our servers. Downloads are processed client-side for your privacy.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Legal Disclaimer -->
+        <section class="max-w-4xl mx-auto">
+            <div class="glass-card rounded-3xl p-8">
+                <h3 class="text-white text-xl font-semibold mb-6 text-center">
+                    <i class="fas fa-gavel mr-2"></i>
+                    Legal Disclaimer & Fair Use
+                </h3>
+                
+                <div class="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <p>
+                        <strong>Important:</strong> This tool is provided for personal, educational, and fair use purposes only. Users are responsible for ensuring their use complies with applicable copyright laws and platform terms of service.
+                    </p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mt-6">
+                        <div class="space-y-3">
+                            <h4 class="text-white font-semibold flex items-center">
+                                <i class="fas fa-check-circle text-emerald-400 mr-2"></i>
+                                Allowed Uses
+                            </h4>
+                            <ul class="space-y-1 text-sm">
+                                <li>• Personal backup of your own content</li>
+                                <li>• Educational and research purposes</li>
+                                <li>• Fair use under copyright law</li>
+                                <li>• Content with explicit permission</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <h4 class="text-white font-semibold flex items-center">
+                                <i class="fas fa-times-circle text-red-400 mr-2"></i>
+                                Prohibited Uses
+                            </h4>
+                            <ul class="space-y-1 text-sm">
+                                <li>• Commercial redistribution</li>
+                                <li>• Copyright infringement</li>
+                                <li>• Violating platform terms of service</li>
+                                <li>• Downloading private/restricted content</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-amber-600/20 border border-amber-600/30 rounded-xl p-4 mt-6">
+                        <p class="text-amber-200 text-sm">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <strong>Disclaimer:</strong> We are not responsible for how users choose to use downloaded content. Please respect intellectual property rights and follow applicable laws in your jurisdiction.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="container mx-auto px-4 py-8 mt-12">
+        <div class="text-center space-y-4">
+            <div class="flex justify-center space-x-6">
+                <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-shield-alt mr-1"></i>
+                    Privacy Policy
+                </a>
+                <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-file-contract mr-1"></i>
+                    Terms of Service
+                </a>
+                <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-question-circle mr-1"></i>
+                    Support
+                </a>
+            </div>
+            <p class="text-white/50 text-sm">
+                © 2024 VideoDownloader Pro. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        (function() {
+            // Theme Management
+            let isDarkMode = false;
+            
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const app = document.getElementById('app');
+            
+            function toggleTheme() {
+                isDarkMode = !isDarkMode;
+                
+                if (isDarkMode) {
+                    app.classList.remove('gradient-bg');
+                    app.classList.add('gradient-bg-dark');
+                    themeIcon.className = 'fas fa-sun text-lg';
+                    
+                    // Update glass cards to dark theme
+                    const glassCards = document.querySelectorAll('.glass-card');
+                    glassCards.forEach(card => {
+                        card.classList.add('glass-card-dark');
+                    });
+                } else {
+                    app.classList.remove('gradient-bg-dark');
+                    app.classList.add('gradient-bg');
+                    themeIcon.className = 'fas fa-moon text-lg';
+                    
+                    // Update glass cards to light theme
+                    const glassCards = document.querySelectorAll('.glass-card');
+                    glassCards.forEach(card => {
+                        card.classList.remove('glass-card-dark');
+                    });
+                }
+                
+                // Store theme preference
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            }
+            
+            // Initialize theme from storage
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                toggleTheme();
+            }
+            
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // URL Input Functionality
+            const videoUrl = document.getElementById('videoUrl');
+            const pasteBtn = document.getElementById('pasteBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const downloadBtnText = document.getElementById('downloadBtnText');
+            const urlDropZone = document.getElementById('urlDropZone');
+            const urlValidation = document.getElementById('urlValidation');
+            
+            // Paste functionality
+            pasteBtn.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    videoUrl.value = text;
+                    validateUrl();
+                } catch (err) {
+                    console.log('Paste failed:', err);
+                    // TODO: Show user-friendly error message
+                }
+            });
+            
+            // Clear functionality
+            clearBtn.addEventListener('click', () => {
+                videoUrl.value = '';
+                hideVideoPreview();
+                hideValidationMessage();
+            });
+            
+            // URL validation
+            function validateUrl() {
+                const url = videoUrl.value.trim();
+                const supportedDomains = [
+                    'youtube.com', 'youtu.be', 'tiktok.com', 'instagram.com', 
+                    'facebook.com', 'twitter.com', 'x.com', 'vimeo.com',
+                    'reddit.com', 'linkedin.com', 'pinterest.com'
+                ];
+                
+                if (url && !supportedDomains.some(domain => url.includes(domain))) {
+                    showValidationMessage('Please enter a URL from a supported platform');
+                    return false;
+                } else {
+                    hideValidationMessage();
+                    return true;
+                }
+            }
+            
+            function showValidationMessage(message) {
+                urlValidation.querySelector('span').textContent = message;
+                urlValidation.classList.remove('hidden');
+            }
+            
+            function hideValidationMessage() {
+                urlValidation.classList.add('hidden');
+            }
+            
+            videoUrl.addEventListener('input', validateUrl);
+            
+            // Drag and drop functionality
+            urlDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                urlDropZone.classList.add('drag-over');
+            });
+            
+            urlDropZone.addEventListener('dragleave', () => {
+                urlDropZone.classList.remove('drag-over');
+            });
+            
+            urlDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                urlDropZone.classList.remove('drag-over');
+                const url = e.dataTransfer.getData('text');
+                videoUrl.value = url;
+                validateUrl();
+            });
+            
+            // Download button functionality
+            downloadBtn.addEventListener('click', () => {
+                const url = videoUrl.value.trim();
+                if (!url) {
+                    showValidationMessage('Please enter a video URL');
+                    return;
+                }
+                
+                if (!validateUrl()) {
+                    return;
+                }
+                
+                // TODO: Implement actual video processing logic
+                processVideo(url);
+            });
+            
+            function processVideo(url) {
+                // Show loading state
+                downloadBtnText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                downloadBtn.disabled = true;
+                
+                // Simulate processing delay
+                setTimeout(() => {
+                    // Show video preview
+                    showVideoPreview();
+                    
+                    // Reset button
+                    downloadBtnText.innerHTML = '<i class="fas fa-download mr-2"></i>Get Video Info';
+                    downloadBtn.disabled = false;
+                    
+                    // TODO: Replace with actual video metadata extraction
+                    // This would integrate with yt-dlp or similar service
+                }, 2000);
+            }
+            
+            function showVideoPreview() {
+                const previewSection = document.getElementById('videoPreview');
+                previewSection.classList.remove('hidden');
+                previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            function hideVideoPreview() {
+                const previewSection = document.getElementById('videoPreview');
+                previewSection.classList.add('hidden');
+            }
+            
+            // Download progress functionality
+            const startDownloadBtn = document.getElementById('startDownloadBtn');
+            const progressSection = document.getElementById('downloadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            startDownloadBtn.addEventListener('click', () => {
+                startDownload();
+            });
+            
+            function startDownload() {
+                // Show progress section
+                progressSection.classList.remove('hidden');
+                progressSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // Simulate download progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress > 100) progress = 100;
+                    
+                    progressBar.style.width = progress + '%';
+                    
+                    if (progress < 30) {
+                        progressText.textContent = 'Extracting video information...';
+                    } else if (progress < 60) {
+                        progressText.textContent = 'Preparing download...';
+                    } else if (progress < 90) {
+                        progressText.textContent = 'Generating download link...';
+                    } else if (progress === 100) {
+                        progressText.textContent = 'Download ready!';
+                        clearInterval(interval);
+                        
+                        // Hide progress and show success notification
+                        setTimeout(() => {
+                            progressSection.classList.add('hidden');
+                            showNotification('success', 'Download Ready!', 'Your video is ready for download');
+                            
+                            // TODO: Provide actual download link or trigger download
+                            // This would be the final step where user gets the file
+                        }, 1000);
+                    }
+                }, 200);
+            }
+            
+            // Copy link functionality
+            const copyLinkBtn = document.getElementById('copyLinkBtn');
+            copyLinkBtn.addEventListener('click', () => {
+                // TODO: Copy actual download link to clipboard
+                navigator.clipboard.writeText('https://example.com/download/video.mp4');
+                showNotification('success', 'Link Copied!', 'Download link copied to clipboard');
+            });
+            
+            // Notification system
+            function showNotification(type, title, message) {
+                const notifications = document.getElementById('notifications');
+                const notification = document.createElement('div');
+                
+                const bgColor = type === 'success' ? 'bg-emerald-600' : 
+                               type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+                
+                const icon = type === 'success' ? 'fa-check-circle' :
+                            type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+                
+                notification.className = `notification ${bgColor} text-white p-4 rounded-xl shadow-lg fade-in`;
+                notification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <i class="fas ${icon} text-xl"></i>
+                        <div>
+                            <div class="font-semibold">${title}</div>
+                            <div class="text-sm opacity-90">${message}</div>
+                        </div>
+                        <button class="text-white/70 hover:text-white ml-4 close-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                notifications.appendChild(notification);
+                
+                // Auto dismiss after 5 seconds
+                setTimeout(() => {
+                    notification.remove();
+                }, 5000);
+                
+                // Manual dismiss
+                notification.querySelector('.close-btn').addEventListener('click', () => {
+                    notification.remove();
+                });
+            }
+            
+            // History management
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            clearHistoryBtn.addEventListener('click', () => {
+                // TODO: Clear download history from localStorage
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = `
+                    <div id="emptyHistory" class="text-center py-8 text-white/50">
+                        <i class="fas fa-history text-3xl mb-4"></i>
+                        <p>No download history yet</p>
+                        <p class="text-sm">Your recent downloads will appear here</p>
+                    </div>
+                `;
+            });
+            
+            // TODO: Implement actual backend integration
+            // This would include:
+            // - yt-dlp or similar video extraction service
+            // - CORS proxy for cross-origin requests
+            // - Rate limiting and abuse prevention
+            // - Video metadata extraction
+            // - Quality option detection
+            // - Download link generation
+            
+        })();
+    </script>
+</body>
+</html>
