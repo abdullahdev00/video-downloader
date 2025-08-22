@@ -46,6 +46,7 @@ export class MemStorage implements IStorage {
       thumbnail: download.thumbnail || null,
       fileSize: download.fileSize || null,
       downloadUrl: download.downloadUrl || null,
+      status: download.status || "pending",
     };
     this.downloadHistory.set(id, historyItem);
     return historyItem;

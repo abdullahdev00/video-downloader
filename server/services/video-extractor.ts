@@ -41,11 +41,13 @@ export class VideoExtractorService {
     return new Promise((resolve, reject) => {
       const platform = this.detectPlatform(url);
       
-      // Use yt-dlp to extract video information
+      // Use yt-dlp to extract video information with better format extraction
       const ytDlp = spawn('yt-dlp', [
         '--dump-json',
         '--no-download',
         '--no-warnings',
+        '--format-sort', 'res,ext:mp4:m4a',
+        '--all-formats',
         url
       ]);
 
@@ -149,29 +151,59 @@ export class VideoExtractorService {
   private extractQualities(formats: any[]): QualityOption[] {
     const qualityMap = new Map<string, QualityOption>();
     
-    // Add audio-only option
+    // Add audio-only option first
     qualityMap.set('audio', {
       quality: 'Audio Only',
       format: 'mp3',
       fileSize: 'Variable'
     });
 
+    // Process video formats and extract better quality options
     formats.forEach(format => {
-      if (format.height && format.vcodec !== 'none') {
-        const quality = `${format.height}p`;
-        const fileSize = format.filesize ? this.formatFileSize(format.filesize) : 'Unknown';
+      if (format.height && format.vcodec !== 'none' && format.ext) {
+        const height = parseInt(format.height);
+        let quality = `${height}p`;
         
-        if (!qualityMap.has(quality) || qualityMap.get(quality)!.fileSize === 'Unknown') {
+        // Better quality naming
+        if (height >= 2160) {
+          quality = '4K (2160p)';
+        } else if (height >= 1440) {
+          quality = '2K (1440p)';
+        } else if (height >= 1080) {
+          quality = '1080p HD';
+        } else if (height >= 720) {
+          quality = '720p HD';
+        }
+        
+        const fileSize = format.filesize ? this.formatFileSize(format.filesize) : 
+                        format.filesize_approx ? this.formatFileSize(format.filesize_approx) : 'Unknown';
+        
+        // Prefer mp4 format and better quality
+        if (!qualityMap.has(quality) || 
+            (qualityMap.get(quality)!.fileSize === 'Unknown' && fileSize !== 'Unknown') ||
+            (format.ext === 'mp4' && qualityMap.get(quality)!.format !== 'mp4')) {
           qualityMap.set(quality, {
-            quality: quality === '2160p' ? '4K' : quality === '1440p' ? '2K' : quality,
-            format: 'mp4',
+            quality,
+            format: format.ext === 'mp4' ? 'mp4' : 'mp4',
             fileSize
           });
         }
       }
     });
 
-    // Sort qualities by resolution
+    // Add common quality options if not available
+    const commonQualities = ['4K (2160p)', '2K (1440p)', '1080p HD', '720p HD', '480p', '360p', '240p'];
+    commonQualities.forEach(qual => {
+      if (!qualityMap.has(qual)) {
+        qualityMap.set(qual, {
+          quality: qual,
+          format: 'mp4',
+          fileSize: 'Unknown'
+        });
+      }
+    });
+
+    // Sort qualities by resolution (highest first)
     const sortedQualities = Array.from(qualityMap.values()).sort((a, b) => {
       if (a.quality === 'Audio Only') return 1;
       if (b.quality === 'Audio Only') return -1;
@@ -194,25 +226,22 @@ export class VideoExtractorService {
   }
 
   private getFormatSelector(quality: string): string {
-    switch (quality) {
-      case '4K':
-      case '2160p':
-        return 'best[height<=2160]';
-      case '2K':
-      case '1440p':
-        return 'best[height<=1440]';
-      case '1080p':
-        return 'best[height<=1080]';
-      case '720p':
-        return 'best[height<=720]';
-      case '480p':
-        return 'best[height<=480]';
-      case '360p':
-        return 'best[height<=360]';
-      case '240p':
-        return 'best[height<=240]';
-      default:
-        return 'best';
+    if (quality.includes('2160') || quality.includes('4K')) {
+      return 'best[height<=2160][ext=mp4]/best[height<=2160]';
+    } else if (quality.includes('1440') || quality.includes('2K')) {
+      return 'best[height<=1440][ext=mp4]/best[height<=1440]';
+    } else if (quality.includes('1080')) {
+      return 'best[height<=1080][ext=mp4]/best[height<=1080]';
+    } else if (quality.includes('720')) {
+      return 'best[height<=720][ext=mp4]/best[height<=720]';
+    } else if (quality.includes('480')) {
+      return 'best[height<=480][ext=mp4]/best[height<=480]';
+    } else if (quality.includes('360')) {
+      return 'best[height<=360][ext=mp4]/best[height<=360]';
+    } else if (quality.includes('240')) {
+      return 'best[height<=240][ext=mp4]/best[height<=240]';
+    } else {
+      return 'best[ext=mp4]/best';
     }
   }
 }
