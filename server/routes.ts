@@ -125,13 +125,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing required parameters' });
       }
 
+      console.log(`Streaming video: ${url}, quality: ${quality}, format: ${format}`);
+
       // Get actual download URL using yt-dlp
       const actualDownloadUrl = await videoExtractor.generateDownloadLink(url, quality, format);
+      console.log(`Actual download URL obtained: ${actualDownloadUrl.substring(0, 50)}...`);
       
       // Get video info for filename
       const videoInfo = await storage.getVideoInfo(url);
       const filename = videoInfo ? 
-        `${videoInfo.title.replace(/[^a-zA-Z0-9]/g, '_')}.${format}` : 
+        `${videoInfo.title.replace(/[^a-zA-Z0-9\s]/g, '_')}.${format}` : 
         `video.${format}`;
       
       // Set headers for download
@@ -139,24 +142,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Cache-Control', 'no-cache');
       
       // Use fetch to get the video data and stream it
       const fetch = (await import('node-fetch')).default;
       
+      console.log('Fetching video from actual URL...');
       const videoResponse = await fetch(actualDownloadUrl, {
+        method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
           'Accept-Language': 'en-US,en;q=0.9',
-          'Accept-Encoding': 'gzip, deflate, br',
+          'Accept-Encoding': 'identity', // Don't compress to avoid issues
           'Connection': 'keep-alive',
-          'Sec-Fetch-Dest': 'video',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'cross-site',
+          'Range': 'bytes=0-', // Support range requests
+          'Referer': 'https://www.youtube.com/',
         }
       });
 
+      console.log(`Video response status: ${videoResponse.status} ${videoResponse.statusText}`);
+
       if (!videoResponse.ok) {
+        console.error(`Failed to fetch video: ${videoResponse.status} ${videoResponse.statusText}`);
         throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
       }
 
@@ -164,16 +172,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contentLength = videoResponse.headers.get('content-length');
       if (contentLength) {
         res.setHeader('Content-Length', contentLength);
+        console.log(`Content length: ${contentLength}`);
+      }
+
+      // Handle range requests
+      const range = req.headers.range;
+      if (range) {
+        res.setHeader('Accept-Ranges', 'bytes');
       }
 
       // Stream the video data to client
-      videoResponse.body?.pipe(res);
+      if (videoResponse.body) {
+        console.log('Starting to stream video data to client...');
+        videoResponse.body.pipe(res);
+        
+        videoResponse.body.on('end', () => {
+          console.log('Video streaming completed successfully');
+        });
+        
+        videoResponse.body.on('error', (error: any) => {
+          console.error('Error during video streaming:', error);
+        });
+      } else {
+        throw new Error('No video data received');
+      }
       
     } catch (error: any) {
       console.error('Stream video error:', error);
-      res.status(500).json({
-        error: error.message || "Failed to stream video"
-      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: error.message || "Failed to stream video"
+        });
+      }
     }
   });
 

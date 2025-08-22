@@ -32,15 +32,15 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
         quality: selectedQuality,
         format: selectedOption?.format || "mp4"
       });
-      return response.json();
+      return { data: await response.json(), selectedOption };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ data, selectedOption }) => {
       // Create download link and trigger download
       if (data.downloadUrl) {
         // Since we're now using server-side streaming, direct download should work
         const link = document.createElement('a');
         link.href = data.downloadUrl;
-        link.download = (videoInfo.title || 'video').replace(/[^a-zA-Z0-9]/g, '_') + '.' + (selectedOption?.format || 'mp4');
+        link.download = (videoInfo.title || 'video').replace(/[^a-zA-Z0-9\s]/g, '_') + '.' + (selectedOption?.format || 'mp4');
         link.style.display = 'none';
         document.body.appendChild(link);
         
@@ -49,7 +49,7 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
         
         toast({
           title: "Download started",
-          description: "Your download should begin shortly via our secure server",
+          description: `Starting ${selectedQuality} download via our secure server`,
         });
         
         // Clean up
