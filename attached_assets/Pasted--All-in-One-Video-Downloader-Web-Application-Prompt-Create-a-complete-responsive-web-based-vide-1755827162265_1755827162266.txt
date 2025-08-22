@@ -1,0 +1,141 @@
+# All-in-One Video Downloader Web Application Prompt
+
+Create a complete, responsive web-based video downloader application with the following specifications:
+
+## Core Requirements:
+
+### 1. **Platform Support**
+- YouTube (all video qualities)
+- TikTok (with and without watermark)
+- Facebook (public videos)
+- Instagram (posts, reels, stories, IGTV)
+- Twitter/X videos
+- Vimeo
+- Dailymotion
+- Reddit videos
+- Pinterest videos
+- LinkedIn videos
+
+### 2. **User Interface Design**
+- **Modern, responsive design** that works on desktop, tablet, and mobile
+- **Dark/Light theme toggle**
+- **Gradient background** with glassmorphism effects
+- **Platform icons** displayed prominently
+- **Clean, intuitive input field** for URLs
+- **Progress indicators** during download process
+- **Success/error notifications** with animations
+
+### 3. **Core Functionality**
+```
+INPUT: Video URL from any supported platform
+PROCESS: 
+- Auto-detect platform from URL
+- Extract video information (title, duration, thumbnail)
+- Show available quality options (480p, 720p, 1080p, etc.)
+- Provide audio-only download option
+OUTPUT: Direct download link or file
+```
+
+### 4. **Features to Include**
+- **URL validation** and platform detection
+- **Video preview** with thumbnail, title, and duration
+- **Multiple quality options** (240p to 4K if available)
+- **Audio extraction** (MP3 format)
+- **Batch download** capability (multiple URLs)
+- **Download history** (stored locally)
+- **Copy download link** option
+- **Social sharing** of the tool
+
+### 5. **Technical Implementation**
+- Use **vanilla HTML, CSS, JavaScript** or **React**
+- Implement **client-side processing** where possible
+- Use **public APIs** or **web scraping techniques**
+- Add **CORS proxy** handling for cross-origin requests
+- Include **error handling** for invalid URLs
+- Implement **rate limiting** to prevent abuse
+
+### 6. **API Integration Suggestions**
+```javascript
+// Example APIs to use:
+- youtube-dl-exec (for YouTube)
+- TikTok API alternatives
+- Instagram public API endpoints
+- Custom scraping for Facebook
+- Generic video extractors
+```
+
+### 7. **User Experience Elements**
+- **Loading animations** during processing
+- **Step-by-step progress** indicators
+- **Drag and drop** URL input
+- **Paste from clipboard** functionality
+- **Recent downloads** list
+- **FAQ section** with usage instructions
+- **Legal disclaimer** about content usage
+
+### 8. **Responsive Design Requirements**
+```css
+/* Mobile-first approach */
+- Grid layout for platform icons
+- Collapsible sections on mobile
+- Touch-friendly buttons (minimum 44px)
+- Optimized typography scaling
+- Smooth animations and transitions
+```
+
+### 9. **Security and Legal Considerations**
+- Add **terms of service** and **privacy policy**
+- Include **fair use disclaimer**
+- Implement **basic rate limiting**
+- Add **CAPTCHA** for heavy usage
+- **No server-side storage** of downloaded content
+
+### 10. **Advanced Features (Optional)**
+- **Browser extension** compatibility
+- **Bookmarklet** for easy access
+- **PWA** (Progressive Web App) capabilities
+- **Offline functionality** for basic features
+- **Multi-language support** (English, Urdu, Hindi)
+
+### 11. **Code Structure**
+```
+project/
+├── index.html (main interface)
+├── styles.css (responsive styling)
+├── script.js (core functionality)
+├── platforms/ (platform-specific handlers)
+├── assets/ (icons, images)
+└── README.md (usage instructions)
+```
+
+### 12. **Error Handling**
+- Invalid URL format detection
+- Private/restricted content handling
+- Network timeout management
+- Platform-specific error messages
+- Fallback options for failed downloads
+
+### 13. **Performance Optimization**
+- Lazy loading for platform icons
+- Cached API responses
+- Optimized image compression
+- Minimal external dependencies
+- Fast loading times (<3 seconds)
+
+## Sample User Flow:
+1. User visits the website
+2. Sees supported platforms with icons
+3. Pastes video URL in input field
+4. System auto-detects platform and extracts video info
+5. Shows video preview with quality options
+6. User selects preferred quality/format
+7. Clicks download and gets direct file or link
+8. Option to save to download history
+
+## Design Inspiration:
+- Modern, clean interface like Figma or Notion
+- Smooth animations similar to Apple's websites
+- Color scheme: Purple/blue gradients with white/dark themes
+- Typography: Clean, readable fonts (Inter, Roboto, or system fonts)
+
+Make sure the application works without requiring any backend server setup and handles all major edge cases gracefully.
