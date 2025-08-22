@@ -41,7 +41,7 @@ export class VideoExtractorService {
     return new Promise((resolve, reject) => {
       const platform = this.detectPlatform(url);
       
-      // Use yt-dlp to extract video information with user agent
+      // Use yt-dlp to extract video information with enhanced bypass options
       const ytDlp = spawn('yt-dlp', [
         '--dump-json',
         '--no-download',
@@ -50,6 +50,12 @@ export class VideoExtractorService {
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         '--ignore-config',
         '--no-check-certificate',
+        '--geo-bypass',
+        '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        '--add-header', 'Accept-Language:en-us,en;q=0.5',
+        '--add-header', 'Sec-Fetch-Mode:navigate',
+        '--extractor-retries', '3',
+        '--socket-timeout', '30',
         url
       ]);
 
@@ -154,7 +160,15 @@ export class VideoExtractorService {
         '--no-warnings',
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         '--ignore-config',
-        '--no-check-certificate'
+        '--no-check-certificate',
+        '--geo-bypass',
+        '--add-header', 'Accept:*/*',
+        '--add-header', 'Accept-Language:en-us,en;q=0.5',
+        '--add-header', 'Sec-Fetch-Mode:cors',
+        '--add-header', 'Sec-Fetch-Site:cross-site',
+        '--extractor-retries', '5',
+        '--fragment-retries', '5',
+        '--socket-timeout', '30'
       ];
       
       if (format === 'mp3') {

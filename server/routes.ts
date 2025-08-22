@@ -80,12 +80,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate download link
+  // Generate download link with server-side streaming
   app.post('/api/generate-download-link', downloadLimiter, async (req, res) => {
     try {
       const { url, quality, format } = downloadRequestSchema.parse(req.body);
       
-      const downloadUrl = await videoExtractor.generateDownloadLink(url, quality, format);
+      // Instead of returning direct URL, return our streaming endpoint
+      const streamingUrl = `/api/stream-video?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(quality)}&format=${encodeURIComponent(format)}`;
       
       // Add to download history
       const videoInfo = await storage.getVideoInfo(url);
@@ -99,18 +100,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quality,
           format,
           fileSize: (videoInfo.availableQualities as any[]).find((q: any) => q.quality === quality)?.fileSize || 'Unknown',
-          downloadUrl,
+          downloadUrl: streamingUrl,
           status: 'completed'
         });
       }
 
       res.json({
-        downloadUrl,
-        expiresIn: '1 hour' // Most video URLs expire after some time
+        downloadUrl: streamingUrl,
+        expiresIn: '24 hours' // Our streaming endpoint doesn't expire
       });
     } catch (error: any) {
       res.status(500).json({
         error: error.message || "Failed to generate download link"
+      });
+    }
+  });
+
+  // Stream video endpoint - bypasses all platform restrictions
+  app.get('/api/stream-video', async (req, res) => {
+    try {
+      const { url, quality, format } = req.query as { url: string; quality: string; format: string };
+      
+      if (!url || !quality || !format) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+      }
+
+      // Get actual download URL using yt-dlp
+      const actualDownloadUrl = await videoExtractor.generateDownloadLink(url, quality, format);
+      
+      // Get video info for filename
+      const videoInfo = await storage.getVideoInfo(url);
+      const filename = videoInfo ? 
+        `${videoInfo.title.replace(/[^a-zA-Z0-9]/g, '_')}.${format}` : 
+        `video.${format}`;
+      
+      // Set headers for download
+      res.setHeader('Content-Type', format === 'mp3' ? 'audio/mpeg' : 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      
+      // Use fetch to get the video data and stream it
+      const fetch = (await import('node-fetch')).default;
+      
+      const videoResponse = await fetch(actualDownloadUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Sec-Fetch-Dest': 'video',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'cross-site',
+        }
+      });
+
+      if (!videoResponse.ok) {
+        throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
+      }
+
+      // Set content length if available
+      const contentLength = videoResponse.headers.get('content-length');
+      if (contentLength) {
+        res.setHeader('Content-Length', contentLength);
+      }
+
+      // Stream the video data to client
+      videoResponse.body?.pipe(res);
+      
+    } catch (error: any) {
+      console.error('Stream video error:', error);
+      res.status(500).json({
+        error: error.message || "Failed to stream video"
       });
     }
   });

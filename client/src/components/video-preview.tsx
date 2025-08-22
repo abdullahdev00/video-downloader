@@ -37,28 +37,20 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
     onSuccess: (data) => {
       // Create download link and trigger download
       if (data.downloadUrl) {
-        // Create temporary link element for download
+        // Since we're now using server-side streaming, direct download should work
         const link = document.createElement('a');
         link.href = data.downloadUrl;
-        link.download = videoInfo.title || 'video';
+        link.download = (videoInfo.title || 'video').replace(/[^a-zA-Z0-9]/g, '_') + '.' + (selectedOption?.format || 'mp4');
         link.style.display = 'none';
         document.body.appendChild(link);
         
-        // Try to trigger download directly
-        try {
-          link.click();
-          toast({
-            title: "Download started",
-            description: "Your download should begin shortly",
-          });
-        } catch (error) {
-          // Fallback: open in new tab if direct download fails
-          window.open(data.downloadUrl, '_blank');
-          toast({
-            title: "Download link opened",
-            description: "If download doesn't start automatically, right-click and save the file",
-          });
-        }
+        // Trigger download
+        link.click();
+        
+        toast({
+          title: "Download started",
+          description: "Your download should begin shortly via our secure server",
+        });
         
         // Clean up
         document.body.removeChild(link);
