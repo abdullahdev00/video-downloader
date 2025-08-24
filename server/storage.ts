@@ -11,6 +11,7 @@ export interface IStorage {
   // Video Info Cache
   getVideoInfo(url: string): Promise<VideoInfo | undefined>;
   saveVideoInfo(videoInfo: InsertVideoInfo): Promise<VideoInfo>;
+  updateVideoInfo(url: string, patch: Partial<InsertVideoInfo>): Promise<VideoInfo | undefined>;
   
   // User management (existing)
   getUser(id: string): Promise<any | undefined>;
@@ -79,6 +80,21 @@ export class MemStorage implements IStorage {
     };
     this.videoInfoCache.set(videoInfo.url, info);
     return info;
+  }
+
+  async updateVideoInfo(url: string, patch: Partial<InsertVideoInfo>): Promise<VideoInfo | undefined> {
+    const existing = await this.getVideoInfo(url);
+    if (!existing) return undefined;
+    const updated: VideoInfo = {
+      ...existing,
+      ...patch,
+      // keep immutable fields consistent
+      url: existing.url,
+      id: existing.id,
+      extractedAt: new Date(),
+    } as VideoInfo;
+    this.videoInfoCache.set(url, updated);
+    return updated;
   }
 
   // User Methods (existing)

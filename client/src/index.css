@@ -167,6 +167,15 @@
   }
 }
 
+/* Two-line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2; /* for linters and emerging support */
+  overflow: hidden;
+}
+
 /* Drag over state */
 .drag-over {
   border-color: var(--primary-500) !important;

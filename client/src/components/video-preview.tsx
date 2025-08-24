@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,11 +19,60 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
   const [selectedQuality, setSelectedQuality] = useState(
     (videoInfo.availableQualities as QualityOption[])[0]?.quality || ""
   );
+  const [preparing, setPreparing] = useState(false);
+  const [qualities, setQualities] = useState<QualityOption[]>(
+    (videoInfo.availableQualities as QualityOption[])
+  );
   const { toast } = useToast();
+  const abortRef = useRef<AbortController | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const fallbackTimerRef = useRef<number | null>(null);
+  const signalledRef = useRef(false);
+  const canceledRef = useRef(false);
+  const pollTimerRef = useRef<number | null>(null);
+
+  function genToken() {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function clearPollTimer() {
+    if (pollTimerRef.current) {
+      try { window.clearInterval(pollTimerRef.current); } catch {}
+      pollTimerRef.current = null;
+    }
+  }
+
+  // Listen for global cancel (from DownloadProgress or elsewhere)
+  useEffect(() => {
+    const onCancel = () => {
+      canceledRef.current = true;
+      if (abortRef.current) {
+        try { abortRef.current.abort(); } catch {}
+        abortRef.current = null;
+      }
+      // Clear any pending iframe/timer before the browser starts the download
+      if (fallbackTimerRef.current) {
+        try { window.clearTimeout(fallbackTimerRef.current); } catch {}
+        fallbackTimerRef.current = null;
+      }
+      clearPollTimer();
+      if (iframeRef.current) {
+        try { if (iframeRef.current.parentNode) iframeRef.current.parentNode.removeChild(iframeRef.current); } catch {}
+        iframeRef.current = null;
+      }
+    };
+    window.addEventListener('download-cancel', onCancel);
+    return () => window.removeEventListener('download-cancel', onCancel);
+  }, []);
 
   const generateDownloadLinkMutation = useMutation({
     mutationFn: async () => {
-      const selectedOption = (videoInfo.availableQualities as QualityOption[]).find(
+      // Prepare abort controller for this request
+      const controller = new AbortController();
+      abortRef.current = controller;
+      canceledRef.current = false;
+      signalledRef.current = false;
+      const selectedOption = (qualities as QualityOption[]).find(
         (q: QualityOption) => q.quality === selectedQuality
       );
       
@@ -31,32 +80,86 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
         url: videoInfo.url,
         quality: selectedQuality,
         format: selectedOption?.format || "mp4"
-      });
+      }, { signal: controller.signal });
       return { data: await response.json(), selectedOption };
     },
     onSuccess: ({ data, selectedOption }) => {
+      abortRef.current = null;
+      if (canceledRef.current) {
+        // If user canceled before success returned, do nothing.
+        return;
+      }
       // Create download link and trigger download
       if (data.downloadUrl) {
-        // Since we're now using server-side streaming, direct download should work
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.download = (videoInfo.title || 'video').replace(/[^a-zA-Z0-9\s]/g, '_') + '.' + (selectedOption?.format || 'mp4');
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        
-        // Trigger download
-        link.click();
-        
+        // Use hidden iframe to detect when the response actually starts
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframeRef.current = iframe;
+        // Generate a token and append to URL so server drops a cookie when response begins
+        const token = genToken();
+        // Ensure universal compatibility for video by requesting compatible=1 (H.264/AAC MP4)
+        let baseUrl = data.downloadUrl;
+        const isAudioOnly = (selectedOption?.format || 'mp4') === 'mp3';
+        if (!isAudioOnly && !/([?&])compatible=/.test(baseUrl)) {
+          baseUrl += (baseUrl.includes('?') ? '&' : '?') + 'compatible=1';
+        }
+        const urlWithToken = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+        const signalStarted = () => {
+          if (signalledRef.current) return;
+          if (canceledRef.current) {
+            // Canceled after iframe attached but before start; ensure cleanup
+            try { if (fallbackTimerRef.current) window.clearTimeout(fallbackTimerRef.current); } catch {}
+            fallbackTimerRef.current = null;
+            try { if (iframeRef.current && iframeRef.current.parentNode) iframeRef.current.parentNode.removeChild(iframeRef.current); } catch {}
+            iframeRef.current = null;
+            return;
+          }
+          signalledRef.current = true;
+          if (fallbackTimerRef.current) window.clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
+          clearPollTimer();
+          try { window.dispatchEvent(new CustomEvent('download-started')); } catch {}
+          // Download is already initiated by iframe navigation; avoid anchor click to prevent duplicate downloads
+          // Cleanup iframe (delayed) so download is not interrupted
+          setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); iframeRef.current = null; }, 1000);
+        };
+        iframe.onload = signalStarted;
+        // Fallback timeout if onload doesn't fire
+        const isSlowPlatform = ['TikTok', 'Instagram', 'Pinterest', 'YouTube'].includes(videoInfo.platform);
+        // Allow more time for server-side transcode on slow platforms (esp. TikTok)
+        const fallbackMs = isSlowPlatform ? 30000 : 8000;
+        fallbackTimerRef.current = window.setTimeout(signalStarted, fallbackMs);
+        iframe.src = urlWithToken;
+        document.body.appendChild(iframe);
+
+        // Poll for cookie to detect when browser has started handling the response
+        clearPollTimer();
+        pollTimerRef.current = window.setInterval(() => {
+          if (canceledRef.current || signalledRef.current) return;
+          const found = document.cookie.split(';').map(s => s.trim()).find(s => s.startsWith('fileDownloadToken='));
+          const val = found ? decodeURIComponent(found.split('=')[1]) : '';
+          if (val && val === token) {
+            signalStarted();
+            // Clear cookie so it doesn't affect subsequent downloads
+            try { document.cookie = 'fileDownloadToken=; Max-Age=0; Path=/; SameSite=Lax'; } catch {}
+          }
+        }, 1000) as unknown as number;
+
         toast({
-          title: "Download started",
-          description: `Starting ${selectedQuality} download via our secure server`,
+          title: "Preparing download...",
+          description: `Preparing ${selectedQuality} via secure server`,
         });
-        
-        // Clean up
-        document.body.removeChild(link);
+
       }
     },
     onError: (error: any) => {
+      abortRef.current = null;
+      if (error?.name === 'AbortError') {
+        // Silent cancel
+        toast({ title: "Download canceled", description: "You canceled the download setup" });
+        return;
+      }
+      setPreparing(false);
       toast({
         title: "Download failed",
         description: error.message || "Failed to generate download link",
@@ -121,6 +224,10 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
     generateDownloadLinkMutation.mutate();
   };
 
+  const handleCancel = () => {
+    try { window.dispatchEvent(new CustomEvent('download-cancel')); } catch {}
+  };
+
   const handleCopyLink = () => {
     if (!selectedQuality) {
       toast({
@@ -157,18 +264,20 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
               />
               
               <div className="space-y-2">
-                <h4 className="text-white dark:text-white font-semibold text-lg leading-tight">
+                <h4 className="text-white dark:text-white font-semibold text-lg leading-tight line-clamp-2">
                   {videoInfo.title}
                 </h4>
                 <div className="flex items-center space-x-4 text-white/70 dark:text-white/70 text-sm">
-                  <span className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {videoInfo.duration}
-                  </span>
+                  {videoInfo.duration && videoInfo.duration !== 'Unknown' && (
+                    <span className="flex items-center">
+                      <Clock className="w-4 h-4 mr-1" />
+                      {videoInfo.duration}
+                    </span>
+                  )}
                   {videoInfo.viewCount && (
                     <span className="flex items-center">
                       <Eye className="w-4 h-4 mr-1" />
-                      {videoInfo.viewCount.toLocaleString()} views
+                      {Intl.NumberFormat().format(videoInfo.viewCount)} views
                     </span>
                   )}
                   <span className="flex items-center">
@@ -191,7 +300,7 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
                 className="space-y-3"
                 data-testid="radio-group-quality"
               >
-                {(videoInfo.availableQualities as QualityOption[]).map((option: QualityOption) => (
+                {(qualities as QualityOption[]).map((option: QualityOption) => (
                   <div key={option.quality}>
                     <Label
                       htmlFor={option.quality}
@@ -212,7 +321,7 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
                           {option.quality}
                         </span>
                         <span className="text-white/70 dark:text-white/70 text-sm">
-                          {option.format.toUpperCase()} • {option.fileSize}
+                          {option.format.toUpperCase()}
                         </span>
                       </div>
                     </Label>
@@ -222,19 +331,33 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
               
               {/* Download Action Buttons */}
               <div className="flex space-x-3 pt-4">
-                <Button
-                  onClick={handleDownload}
-                  disabled={generateDownloadLinkMutation.isPending || !selectedQuality}
-                  className={cn(
-                    "flex-1 bg-emerald-600 hover:bg-emerald-700",
-                    "text-white font-semibold py-3 px-6 rounded-xl",
-                    "transition-all duration-300"
-                  )}
-                  data-testid="button-start-download"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  {generateDownloadLinkMutation.isPending ? "Processing..." : "Download"}
-                </Button>
+                {generateDownloadLinkMutation.isPending ? (
+                  <Button
+                    onClick={handleCancel}
+                    className={cn(
+                      "flex-1 bg-red-600 hover:bg-red-700",
+                      "text-white font-semibold py-3 px-6 rounded-xl",
+                      "transition-all duration-300"
+                    )}
+                    data-testid="button-cancel-download"
+                  >
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleDownload}
+                    disabled={!selectedQuality}
+                    className={cn(
+                      "flex-1 bg-emerald-600 hover:bg-emerald-700",
+                      "text-white font-semibold py-3 px-6 rounded-xl",
+                      "transition-all duration-300"
+                    )}
+                    data-testid="button-start-download"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                )}
                 <Button
                   onClick={handleCopyLink}
                   disabled={copyLinkMutation.isPending || !selectedQuality}
@@ -252,6 +375,7 @@ export function VideoPreview({ videoInfo, onDownloadStart }: VideoPreviewProps) 
               </div>
             </div>
           </div>
+          
         </CardContent>
       </Card>
     </section>

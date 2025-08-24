@@ -56,7 +56,9 @@ export function getSupportedPlatforms(): string[] {
     'reddit.com',
     'linkedin.com',
     'pinterest.com',
-    'dailymotion.com'
+    'pin.it',
+    'dailymotion.com',
+    'dai.ly'
   ];
 }
 
@@ -74,8 +76,8 @@ export function detectPlatformFromUrl(url: string): string {
   if (domain.includes('vimeo')) return 'Vimeo';
   if (domain.includes('reddit')) return 'Reddit';
   if (domain.includes('linkedin')) return 'LinkedIn';
-  if (domain.includes('pinterest')) return 'Pinterest';
-  if (domain.includes('dailymotion')) return 'Dailymotion';
+  if (domain.includes('pinterest') || domain.includes('pin.it')) return 'Pinterest';
+  if (domain.includes('dailymotion') || domain.includes('dai.ly')) return 'Dailymotion';
   
   return 'Unknown';
 }

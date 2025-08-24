@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -25,40 +26,43 @@ export function DownloadProgress({ isVisible, downloadInfo, onComplete }: Downlo
       return;
     }
 
-    const steps = [
-      { progress: 20, text: "Extracting video information..." },
-      { progress: 40, text: "Preparing download..." },
-      { progress: 70, text: "Generating download link..." },
-      { progress: 90, text: "Finalizing..." },
-      { progress: 100, text: "Download ready!" }
-    ];
-
-    let currentStepIndex = 0;
-    const interval = setInterval(() => {
-      if (currentStepIndex < steps.length) {
-        const step = steps[currentStepIndex];
-        setProgress(step.progress);
-        setCurrentStep(step.text);
-        
-        if (step.progress === 100) {
-          setTimeout(() => {
-            onComplete();
-          }, 1000);
-        }
-        
-        currentStepIndex++;
-      } else {
-        clearInterval(interval);
+    // Smoothly increment progress up to 95%
+    setCurrentStep("Preparing download...");
+    let raf: number;
+    let localProgress = 0;
+    const tick = () => {
+      setProgress((prev) => {
+        const next = Math.min(prev + 1, 95);
+        localProgress = next;
+        return next;
+      });
+      if (localProgress < 30) setCurrentStep("Extracting video information...");
+      else if (localProgress < 60) setCurrentStep("Generating download link...");
+      else if (localProgress < 90) setCurrentStep("Finalizing...");
+      if (localProgress < 95) {
+        raf = window.setTimeout(tick, 120); // ~12% per 1.2s => ~8-10s to reach 95%
       }
-    }, 800);
+    };
+    tick();
 
-    return () => clearInterval(interval);
+    // Finish only when browser download actually starts
+    const handleStarted = () => {
+      setCurrentStep("Download ready!");
+      setProgress(100);
+      setTimeout(() => onComplete(), 300);
+    };
+    window.addEventListener('download-started', handleStarted);
+
+    return () => {
+      window.removeEventListener('download-started', handleStarted);
+      if (raf) window.clearTimeout(raf);
+    };
   }, [isVisible, onComplete]);
 
   if (!isVisible) return null;
 
   return (
-    <section className="max-w-2xl mx-auto mb-12 fade-in">
+    <section className="max-w-4xl mx-auto mb-12 fade-in">
       <Card className={cn(
         "glass-card rounded-3xl p-8",
         "bg-white/10 dark:bg-slate-900/70 backdrop-blur-[16px]",
@@ -86,11 +90,24 @@ export function DownloadProgress({ isVisible, downloadInfo, onComplete }: Downlo
             <div className="w-full space-y-2">
               <Progress
                 value={progress}
-                className="w-full h-3 bg-white/10 dark:bg-slate-800/50"
+                className="w-full h-4 bg-white/10 dark:bg-slate-800/50"
                 data-testid="progress-download"
               />
               <div className="text-white/80 dark:text-white/80 text-sm">
                 {currentStep}
+              </div>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try { window.dispatchEvent(new CustomEvent('download-cancel')); } catch {}
+                    onComplete();
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300"
+                  data-testid="button-cancel-progress"
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
           </div>

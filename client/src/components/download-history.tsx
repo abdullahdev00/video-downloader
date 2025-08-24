@@ -160,7 +160,7 @@ export function DownloadHistoryComponent() {
                       {item.title}
                     </h4>
                     <p className="text-white/70 dark:text-white/70 text-sm">
-                      Downloaded {formatTimeAgo(new Date(item.createdAt!))} • {item.quality} • {item.fileSize}
+                      Downloaded {formatTimeAgo(new Date(item.createdAt!))} • {item.quality}
                     </p>
                     <p className="text-white/50 dark:text-white/50 text-xs">
                       {item.platform}
